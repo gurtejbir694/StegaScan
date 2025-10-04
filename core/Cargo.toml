@@ -1,0 +1,16 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+image = "0.25.8"  # Latest for image handling
+kamadak-exif = "0.6.1"  # Replaces exif; parses Exif from JPEG/TIFF/etc.
+id3 = "1.16.3"  # Bumped for ID3 tags (audio)
+hound = "3.5.1"  # WAV audio
+rustfft = "6.4.1"  # FFT for spectrogram
+byteorder = "1.5.0"  # Binary analysis
+rayon = "1.11.0"  # Concurrency
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0.17"

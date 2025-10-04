@@ -1,0 +1,7 @@
+target/
+*.o
+*.d
+*.so
+*.rlib
+*.lock  # Optional: Keep if you want exact dependency versions
+.DS_Store
