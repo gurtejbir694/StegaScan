@@ -1,3 +1,3 @@
 [workspace]
-members = ["core", "steg_cli"]  # Add more like "cli", "web" later
+members = ["analyzers","core", "parsers", "steg_cli"]  # Add more like "cli", "web" later
 resolver = "3"
