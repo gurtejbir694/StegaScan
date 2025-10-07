@@ -1,9 +1,9 @@
 use analyzers::{Analyzer, image_filter::ImageFilterAnalyzer};
 use clap::Parser;
 use infer::Infer;
-use parsers::{Parser as _, image_parser::ImageParser};
+use parsers::{Parser as _, audio_parser::AudioParser, image_parser::ImageParser};
 use serde::Serialize;
-use std::path::PathBuf;
+use std::{ops::DerefMut, path::PathBuf};
 
 #[derive(Parser)]
 #[command(
@@ -46,10 +46,22 @@ fn process_file(path: &PathBuf) -> Result<FileObject, Box<dyn std::error::Error>
             mime if mime.starts_with("video/") => FileType::Video,
             mime if mime.starts_with("text/") || mime.starts_with("application/") => FileType::Text,
             mime if mime.starts_with("image/") => FileType::Image,
-            _ => FileType::Text, // Default to Text for unclassified
+            _ => {
+                // Fallback for unrecognized types (e.g., WMA)
+                if path.extension().and_then(|ext| ext.to_str()) == Some("wma") {
+                    FileType::Audio
+                } else {
+                    FileType::Text // Default for unclassified
+                }
+            }
         }
     } else {
-        FileType::Text // Fallback for unreadable files
+        // Fallback for unreadable files
+        if path.extension().and_then(|ext| ext.to_str()) == Some("wma") {
+            FileType::Audio
+        } else {
+            FileType::Text
+        }
     };
     Ok(FileObject {
         file_path: path.to_path_buf(),
@@ -59,7 +71,9 @@ fn process_file(path: &PathBuf) -> Result<FileObject, Box<dyn std::error::Error>
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    pretty_env_logger::init();
+    pretty_env_logger::formatted_builder()
+        .filter_level(log::LevelFilter::Info)
+        .init();
     let args = Args::parse();
 
     let file_object = process_file(&args.file)?;
@@ -74,13 +88,30 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
-    std::fs::remove_dir_all("outputs/");
+    let _ = std::fs::remove_dir_all("outputs/");
 
     std::fs::create_dir("outputs/").unwrap();
 
     for file_object in file_objects.into_iter() {
         match file_object.file_type {
-            FileType::Audio => todo!(),
+            FileType::Audio => {
+                match AudioParser::parse_path(&file_object.file_path) {
+                    Ok(samples) => {
+                        if args.verbose {
+                            log::info!("Audio samples length: {}", samples.len());
+                        }
+                        // Placeholder for future audio analysis
+                        println!("Processed {} audio samples successfully", samples.len());
+                    }
+                    Err(e) => {
+                        log::error!("Error parsing audio file: {:?}", e);
+                        if args.verbose {
+                            eprintln!("Detailed error: {:?}", e);
+                        }
+                        return Err(Box::new(e)); // Propagate the error
+                    }
+                }
+            }
             FileType::Video => todo!(),
             FileType::Text => todo!(),
             FileType::Image => {

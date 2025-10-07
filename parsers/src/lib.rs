@@ -1,3 +1,4 @@
+pub mod audio_parser;
 pub mod image_parser;
 use std::path::Path;
 
