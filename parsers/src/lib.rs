@@ -1,5 +1,6 @@
 pub mod audio_parser;
 pub mod image_parser;
+pub mod video_parser;
 use std::path::Path;
 
 pub trait Parser {

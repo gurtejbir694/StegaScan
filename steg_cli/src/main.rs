@@ -1,9 +1,12 @@
 use analyzers::{Analyzer, image_filter::ImageFilterAnalyzer};
 use clap::Parser;
+use image::DynamicImage;
 use infer::Infer;
-use parsers::{Parser as _, audio_parser::AudioParser, image_parser::ImageParser};
+use parsers::{
+    Parser as _, audio_parser::AudioParser, image_parser::ImageParser, video_parser::VideoParser,
+};
 use serde::Serialize;
-use std::{ops::DerefMut, path::PathBuf};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(
@@ -112,7 +115,57 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            FileType::Video => todo!(),
+            FileType::Video => {
+                match VideoParser::parse_path(&file_object.file_path) {
+                    Ok(frame_iter) => {
+                        let mut frame_count = 0;
+                        let mut error_count = 0;
+
+                        for (idx, frame_result) in frame_iter.enumerate() {
+                            match frame_result {
+                                Ok(_frame) => {
+                                    frame_count += 1;
+
+                                    if args.verbose && idx % 100 == 0 {
+                                        log::info!("Processing frame {}...", idx);
+                                    }
+
+                                    // TODO: Add video frame analyzers here
+                                    // Example:
+                                    // let dynamic_image = DynamicImage::ImageRgba8(frame);
+                                    // let output = ImageFilterAnalyzer::analyze(dynamic_image).unwrap_or_default();
+                                }
+                                Err(e) => {
+                                    error_count += 1;
+                                    log::error!("Error decoding frame {}: {:?}", idx, e);
+                                    if args.verbose {
+                                        eprintln!("Detailed frame decode error: {:?}", e);
+                                    }
+                                }
+                            }
+                        }
+
+                        if args.verbose {
+                            log::info!(
+                                "Video processing complete: {} frames successfully processed, {} errors",
+                                frame_count,
+                                error_count
+                            );
+                        }
+                        println!(
+                            "Processed {} video frames ({} errors)",
+                            frame_count, error_count
+                        );
+                    }
+                    Err(e) => {
+                        log::error!("Error parsing video file: {:?}", e);
+                        if args.verbose {
+                            eprintln!("Detailed error: {:?}", e);
+                        }
+                        return Err(Box::new(e));
+                    }
+                }
+            }
             FileType::Text => todo!(),
             FileType::Image => {
                 let image = ImageParser::parse_path(&file_object.file_path).unwrap();
