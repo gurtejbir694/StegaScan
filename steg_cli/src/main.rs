@@ -342,7 +342,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
             FileType::Image => {
-                let image = ImageParser::parse_path(&file_object.file_path).unwrap();
+                let image = match ImageParser::parse_path(&file_object.file_path) {
+                    Ok(image) => image,
+                    Err(err) => {
+                        log::error!("Error while reading image: {err}");
+                    }
+                };
 
                 println!("\n=== Image Analysis ===");
 
