@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-core = { version = "0.1.0", path = "../core" }
 image = "0.25.8"
 hound = "3.5.1"
 symphonia = { version = "0.5.4", features = ["all"] }

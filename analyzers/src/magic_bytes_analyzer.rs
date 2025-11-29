@@ -342,7 +342,7 @@ fn manual_signature_scan(data: &[u8]) -> Vec<EmbeddedFile> {
     let signatures: Vec<(Vec<u8>, &str, bool)> = vec![
         // Audio (only look for complete headers)
         (vec![0x52, 0x49, 0x46, 0x46], "RIFF container", true), // Need to verify WAVE header
-        (vec![0x49, 0x44, 0x33], "ID3 tag", false),             // Too short, skip
+        (vec![0x49, 0x44, 0x33], "ID3 tag", true),              // Too short, skip
         (vec![0x66, 0x4C, 0x61, 0x43], "FLAC audio", true),
         (vec![0x4F, 0x67, 0x67, 0x53], "OGG audio", true),
         // Images (complete headers only)
@@ -377,6 +377,8 @@ fn manual_signature_scan(data: &[u8]) -> Vec<EmbeddedFile> {
             "7-Zip archive",
             true,
         ),
+        (vec![0x1A, 0x45, 0xDF, 0xA3], "Webm/mkv", true),
+        (vec![0x66, 0x74, 0x79, 0x70], "Mp4", true),
     ];
 
     // Search for signatures, but be smart about it

@@ -5,3 +5,4 @@ target/
 *.rlib
 *.lock  # Optional: Keep if you want exact dependency versions
 .DS_Store
+outputs/
