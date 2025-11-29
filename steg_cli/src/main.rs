@@ -346,6 +346,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(image) => image,
                     Err(err) => {
                         log::error!("Error while reading image: {err}");
+                        continue;
                     }
                 };
 

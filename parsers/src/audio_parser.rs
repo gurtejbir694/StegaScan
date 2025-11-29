@@ -108,7 +108,7 @@ impl Parser for AudioParser {
                         }
                         AudioBufferRef::U24(buf) => {
                             for &sample in buf.chan(0) {
-                                let val = sample.into_u32() as f32;
+                                let val = sample.inner() as f32;
                                 samples.push((val - 8388608.0) / 8388608.0);
                             }
                         }
