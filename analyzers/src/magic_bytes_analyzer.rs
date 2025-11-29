@@ -97,7 +97,12 @@ impl<'a> MagicBytesAnalyzerWithPath<'a> {
                 offset: sig.offset,
                 description: sig.name.clone(),
                 file_type: determine_file_category(&sig.name).to_string(),
-                confidence: sig.confidence.to_string(),
+                confidence: match sig.confidence {
+                    0..100 => "low",
+                    100..200 => "medium",
+                    200..255 => "high",
+                }
+                .to_string(),
             });
         }
 
