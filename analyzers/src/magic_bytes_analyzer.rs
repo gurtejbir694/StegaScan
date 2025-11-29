@@ -100,7 +100,7 @@ impl<'a> MagicBytesAnalyzerWithPath<'a> {
                 confidence: match sig.confidence {
                     0..100 => "low",
                     100..200 => "medium",
-                    200..255 => "high",
+                    200..=u8::MAX => "high",
                 }
                 .to_string(),
             });
