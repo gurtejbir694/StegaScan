@@ -49,7 +49,7 @@ impl VideoFrameIterator {
     pub fn new<P: AsRef<Path>>(file_path: &P) -> Result<Self, VideoParserError> {
         ffmpeg::init()?;
 
-        let mut input = ffmpeg::format::input(file_path.as_ref())?;
+        let input = ffmpeg::format::input(file_path.as_ref())?;
         let video_stream =
             input
                 .streams()

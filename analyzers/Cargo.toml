@@ -5,3 +5,7 @@ edition = "2024"
 
 [dependencies]
 image = "0.25.8"
+rustfft = "6.4.1"
+id3 = "1.16.3"
+kamadak-exif = "0.6.1"
+binwalk = "3.1.0"
