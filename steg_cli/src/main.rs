@@ -2,6 +2,7 @@ use analyzers::{
     Analyzer, exif_analyzer::ExifAnalyzerWithPath, id3_analyzer::Id3AnalyzerWithPath,
     image_filter::ImageFilterAnalyzer, lsb_analyzer::LsbAnalyzer,
     magic_bytes_analyzer::MagicBytesAnalyzerWithPath, spectrogram_analyzer::SpectrogramAnalyzer,
+    video_frame_analyzer::VideoFrameAnalyzer,
 };
 use clap::Parser;
 use infer::Infer;
@@ -33,6 +34,10 @@ struct Args {
     /// Output path for JSON report
     #[arg(short, long, default_value = "outputs/report.json")]
     output: String,
+
+    /// Number of video frames to sample (analyze every Nth frame)
+    #[arg(long, default_value = "30")]
+    video_sample_rate: usize,
 }
 
 #[derive(Serialize, Debug)]
@@ -328,54 +333,131 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     }
                 }
             }
-            FileType::Video => match VideoParser::parse_path(&file_object.file_path) {
-                Ok(frame_iter) => {
-                    let mut frame_count = 0;
-                    let mut error_count = 0;
+            FileType::Video => {
+                match VideoParser::parse_path(&file_object.file_path) {
+                    Ok(frame_iter) => {
+                        let mut frame_count = 0;
+                        let mut error_count = 0;
+                        let mut suspicious_frame_indices = Vec::new();
+                        let mut total_entropy = 0.0;
+                        let mut frames_analyzed = 0;
 
-                    for (idx, frame_result) in frame_iter.enumerate() {
-                        match frame_result {
-                            Ok(_frame) => {
-                                frame_count += 1;
-                                if args.verbose && idx % 100 == 0 {
-                                    log::info!("Processing frame {}...", idx);
+                        println!("\n=== Video Frame Analysis ===");
+                        println!(
+                            "Sampling every {} frames for steganography analysis",
+                            args.video_sample_rate
+                        );
+
+                        for (idx, frame_result) in frame_iter.enumerate() {
+                            match frame_result {
+                                Ok(frame) => {
+                                    frame_count += 1;
+
+                                    if args.verbose && idx % 100 == 0 {
+                                        log::info!("Processing frame {}...", idx);
+                                    }
+
+                                    // Perform detailed analysis on sampled frames
+                                    if idx % args.video_sample_rate == 0 {
+                                        let dynamic_image = image::DynamicImage::ImageRgba8(frame);
+
+                                        match VideoFrameAnalyzer::analyze(dynamic_image) {
+                                            Ok(mut analysis) => {
+                                                analysis.frame_index = idx;
+                                                frames_analyzed += 1;
+
+                                                // Collect entropy for averaging
+                                                let avg_entropy: f64 =
+                                                    analysis.entropy_scores.iter().sum::<f64>()
+                                                        / analysis.entropy_scores.len() as f64;
+                                                total_entropy += avg_entropy;
+
+                                                // Track anomalies
+                                                if analysis.lsb_suspicious
+                                                    || analysis.histogram_anomalies
+                                                {
+                                                    suspicious_frame_indices.push(idx);
+
+                                                    if args.verbose {
+                                                        println!(
+                                                            "\n⚠️  Suspicious frame {} detected:",
+                                                            idx
+                                                        );
+                                                        println!(
+                                                            "   LSB suspicious: {}",
+                                                            analysis.lsb_suspicious
+                                                        );
+                                                        println!(
+                                                            "   Histogram anomalies: {}",
+                                                            analysis.histogram_anomalies
+                                                        );
+                                                        println!(
+                                                            "   Edge density: {:.4}",
+                                                            analysis.edge_density
+                                                        );
+                                                    }
+                                                }
+                                            }
+                                            Err(e) => {
+                                                log::warn!("Frame {} analysis failed: {}", idx, e);
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                            Err(e) => {
-                                error_count += 1;
-                                log::error!("Error decoding frame {}: {:?}", idx, e);
-                                if args.verbose {
-                                    eprintln!("Detailed frame decode error: {:?}", e);
+                                Err(e) => {
+                                    error_count += 1;
+                                    log::error!("Error decoding frame {}: {:?}", idx, e);
+                                    if args.verbose {
+                                        eprintln!("Detailed frame decode error: {:?}", e);
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    if args.verbose {
-                        log::info!(
-                            "Video processing complete: {} frames successfully processed, {} errors",
-                            frame_count,
-                            error_count
-                        );
-                    }
-                    println!(
-                        "Processed {} video frames ({} errors)",
-                        frame_count, error_count
-                    );
+                        let avg_entropy = if frames_analyzed > 0 {
+                            total_entropy / frames_analyzed as f64
+                        } else {
+                            0.0
+                        };
 
-                    report.set_format_analysis(FormatSpecificAnalysis::Video(VideoAnalysis {
-                        frames_processed: frame_count,
-                        errors_encountered: error_count,
-                    }));
-                }
-                Err(e) => {
-                    log::error!("Error parsing video file: {:?}", e);
-                    if args.verbose {
-                        eprintln!("Detailed error: {:?}", e);
+                        if args.verbose {
+                            log::info!(
+                                "Video processing complete: {} frames total, {} frames analyzed, {} errors",
+                                frame_count,
+                                frames_analyzed,
+                                error_count
+                            );
+                        }
+
+                        println!("\n--- Video Analysis Summary ---");
+                        println!("Total frames: {}", frame_count);
+                        println!("Frames analyzed: {}", frames_analyzed);
+                        println!("Suspicious frames: {}", suspicious_frame_indices.len());
+                        println!("Average entropy: {:.4}", avg_entropy);
+                        println!("Errors encountered: {}", error_count);
+
+                        if !suspicious_frame_indices.is_empty() {
+                            println!(
+                                "\n⚠️  Suspicious frames at indices: {:?}",
+                                suspicious_frame_indices
+                            );
+                            println!("Consider extracting these frames for detailed analysis");
+                        }
+
+                        report.set_format_analysis(FormatSpecificAnalysis::Video(VideoAnalysis {
+                            frames_processed: frame_count,
+                            errors_encountered: error_count,
+                        }));
                     }
-                    return Err(Box::new(e));
+                    Err(e) => {
+                        log::error!("Error parsing video file: {:?}", e);
+                        if args.verbose {
+                            eprintln!("Detailed error: {:?}", e);
+                        }
+                        return Err(Box::new(e));
+                    }
                 }
-            },
+            }
             FileType::Text => match TextParser::parse_path(&file_object.file_path) {
                 Ok(text_content) => {
                     println!("\n=== Text File Analysis ===");

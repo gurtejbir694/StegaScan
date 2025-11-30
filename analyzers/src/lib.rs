@@ -4,6 +4,7 @@ pub mod image_filter;
 pub mod lsb_analyzer;
 pub mod magic_bytes_analyzer;
 pub mod spectrogram_analyzer;
+pub mod video_frame_analyzer;
 pub trait Analyzer {
     type Output;
     type Input;

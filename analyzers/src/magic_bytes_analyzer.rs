@@ -260,6 +260,11 @@ fn determine_file_category(description: &str) -> &str {
         || desc_lower.contains("tiff")
         || desc_lower.contains("webp")
         || desc_lower.contains("image")
+        || desc_lower.contains("pgm")  // ADD THIS
+        || desc_lower.contains("ppm")  // ADD THIS
+        || desc_lower.contains("pbm")  // ADD THIS
+        || desc_lower.contains("pnm")
+    // ADD THIS
     {
         "Image"
     } else if desc_lower.contains("mp3")
@@ -379,6 +384,14 @@ fn manual_signature_scan(data: &[u8]) -> Vec<EmbeddedFile> {
         ),
         (vec![0x1A, 0x45, 0xDF, 0xA3], "Webm/mkv", true),
         (vec![0x66, 0x74, 0x79, 0x70], "Mp4", true),
+        // Add these after the existing image signatures:
+        // Portable image formats (PGM, PBM, PPM, PNM)
+        (vec![0x50, 0x35, 0x0A], "PGM image (P5 - binary)", true), // P5\n
+        (vec![0x50, 0x32, 0x0A], "PGM image (P2 - ASCII)", true),  // P2\n
+        (vec![0x50, 0x36, 0x0A], "PPM image (P6 - binary)", true), // P6\n
+        (vec![0x50, 0x33, 0x0A], "PPM image (P3 - ASCII)", true),  // P3\n
+        (vec![0x50, 0x34, 0x0A], "PBM image (P4 - binary)", true), // P4\n
+        (vec![0x50, 0x31, 0x0A], "PBM image (P1 - ASCII)", true),  // P1\n
     ];
 
     // Search for signatures, but be smart about it
@@ -500,6 +513,20 @@ fn detect_format_at_offset(data: &[u8], offset: usize) -> String {
     if bytes.starts_with(&[0x47, 0x49, 0x46, 0x38]) {
         return "GIF image".to_string();
     }
+    // Add after the GIF check:
+    if bytes.starts_with(b"P5") || bytes.starts_with(b"P2") {
+        return "PGM image".to_string();
+    }
+
+    if bytes.starts_with(b"P6") || bytes.starts_with(b"P3") {
+        return "PPM image".to_string();
+    }
+
+    if bytes.starts_with(b"P4") || bytes.starts_with(b"P1") {
+        return "PBM image".to_string();
+    }
+
+    // Then continue with existing PDF check...
 
     if bytes.starts_with(&[0x25, 0x50, 0x44, 0x46]) {
         return "PDF document".to_string();
