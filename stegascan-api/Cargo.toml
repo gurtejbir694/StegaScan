@@ -1,0 +1,43 @@
+[package]
+name = "stegascan-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Web framework
+axum = { version = "0.7", features = ["multipart"] }
+tokio = { version = "1", features = ["full"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["fs", "cors", "trace"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# File handling
+tempfile = "3.10"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Async utilities
+futures = "0.3"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Error handling
+thiserror = "1.0"
+
+# Workspace dependencies
+analyzers = { path = "../analyzers" }
+parsers = { path = "../parsers" }
+infer = "0.19.0"
+image = "0.25.8"
+chrono = { version = "0.4", features = ["serde"] }
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "stegascan-api"
+path = "src/main.rs"

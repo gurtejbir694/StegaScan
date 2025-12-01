@@ -1,4 +1,4 @@
 [workspace]
-members = ["analyzers", "parsers", "steg_cli"]  # Add more like "cli", "web" later
+members = ["analyzers", "parsers", "steg_cli", "stegascan-api"]  # Add more like "cli", "web" later
 resolver = "3"
  
